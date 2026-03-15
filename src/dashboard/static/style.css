@@ -1,0 +1,104 @@
+/*
+ * COE Trading Dashboard — supplementary component styles.
+ * Core layout and variables live in the <style> block in index.html.
+ * This file covers scrollbars, animations, and component-level polish.
+ */
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────────── */
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #30363d #161b22;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #161b22;
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}
+
+/* ── Connection status pulse animation ─────────────────────────────────────── */
+
+@keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.5); }
+    50%  { box-shadow: 0 0 0 5px rgba(63, 185, 80, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+}
+
+/* ── Card header refinements ────────────────────────────────────────────────── */
+
+.card-header .card-title {
+    user-select: none;
+}
+
+.card-header .card-badge {
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* ── Table hover and row flash ──────────────────────────────────────────────── */
+
+tbody tr {
+    transition: background 0.12s ease;
+}
+
+/* Brief highlight for a freshly inserted row (class applied by JS if desired) */
+@keyframes row-flash {
+    from { background: rgba(88, 166, 255, 0.15); }
+    to   { background: transparent; }
+}
+
+tr.new-row {
+    animation: row-flash 0.8s ease forwards;
+}
+
+/* ── Signal entry hover ─────────────────────────────────────────────────────── */
+
+.signal-entry {
+    transition: background 0.1s ease;
+}
+
+/* ── Header metric pill value transitions ───────────────────────────────────── */
+
+.metric-pill .value {
+    transition: color 0.25s ease;
+}
+
+/* ── Responsive: single-column layout on narrow viewports ──────────────────── */
+
+@media (max-width: 900px) {
+    body {
+        overflow-y: auto;
+    }
+
+    .dashboard-grid {
+        height: auto;
+    }
+
+    /* Show only the two most critical header metrics on small screens */
+    .header-right .metric-pill:nth-child(n + 4) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 12px;
+    }
+
+    .header-right .metric-pill:nth-child(n + 3) {
+        display: none;
+    }
+}

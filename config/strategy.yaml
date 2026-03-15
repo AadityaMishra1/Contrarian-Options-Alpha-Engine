@@ -1,0 +1,84 @@
+strategy:
+  rsi:
+    period: 14
+    oversold: 30.0
+    overbought: 70.0
+
+  bollinger:
+    period: 20
+    multiplier: 2.0
+
+  volume:
+    lookback: 20
+    spike_threshold: 2.0
+
+  greeks:
+    delta_min: 0.20
+    delta_max: 0.40
+    iv_percentile_max: 50.0
+    spread_pct_max: 20.0
+
+  scoring:
+    weight_rsi: 0.30
+    weight_bollinger: 0.25
+    weight_volume: 0.25
+    weight_greeks: 0.20
+    min_composite: 0.65
+
+  options:
+    dte_min: 1
+    dte_max: 5
+    price_min: 0.05
+    price_max: 0.30
+
+# v2 Strategy Configuration (research-backed)
+strategy_v2:
+  # Pillar 1: HV-IV Gap (Goyal-Saretto 2009)
+  hv_iv:
+    universe_size: 100
+    min_gap_ratio: 1.2        # IV/HV threshold for sell signal
+    strong_sell_ratio: 1.5    # extra conviction level
+    hv_window_short: 30       # days for primary HV
+    hv_window_long: 60        # days for robustness check
+    iv_target_dte: 30         # target DTE for ATM IV
+    min_options_volume: 1000
+    earnings_buffer_days: 7   # skip stocks within N days of earnings
+
+  # Pillar 2: PEAD (Bernard-Thomas 1989)
+  pead:
+    sue_threshold: 1.0        # minimum |SUE| to trigger
+    lookback_days: 3          # how far back to find recent earnings
+    entry_dte: 21             # target DTE for directional spreads
+    entry_dte_max: 30
+    entry_delta: 0.50         # near ATM for maximum drift capture
+    confirm_signals: 2        # minimum aligned signals (of 3) to trade
+
+  # Regime Filter (Baltussen et al. 2018)
+  regime:
+    crisis_vix: 35.0
+    elevated_vix: 25.0
+    normal_vix: 18.0
+    quiet_vvix: 85.0
+
+  # Skew Filter (Xing et al. 2010)
+  skew:
+    lookback: 60
+    steep_threshold: 1.5      # z-score above which to avoid selling puts
+    flat_threshold: -1.0      # z-score below which is safe
+
+  # Execution (Muravyev & Pearson 2020)
+  execution:
+    window_start: "11:00"     # ET
+    window_end: "14:00"       # ET
+    max_spread_pct: 15.0      # reject if bid-ask > 15% of value
+    order_type: "limit"       # always limit orders
+    midpoint_offset: 0.02     # cents through mid for fills
+
+  # Position Sizing
+  sizing:
+    method: "quarter_kelly"
+    max_position_pct: 3.0     # max 3% of account per position
+    max_concurrent: 5
+    max_per_sector: 2
+    regime_scalar: true       # multiply by regime position_scalar
+    skew_scalar: true         # multiply by skew position_scalar

@@ -1,0 +1,57 @@
+# Build
+build/
+engine/build/
+*.o
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Data and cache
+data/cache/
+data/*.parquet
+logs/
+backtest/reports/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+engine/.cache/
+
+# Secrets - NEVER commit these
+.env
+.env.*
+config/alerts.yaml
+
+# Private docs and prompts
+PROMPT.md
+POLYMARKET_PROMPT.md
+Claude.MD
+docs/STRATEGY_REDESIGN.md
+docs/research/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+htmlcov/
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

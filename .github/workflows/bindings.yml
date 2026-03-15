@@ -1,0 +1,72 @@
+name: Python Bindings
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/**'
+      - 'src/coe_engine/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'engine/**'
+      - 'src/coe_engine/**'
+
+jobs:
+  build-bindings:
+    name: Build & Test Bindings
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        # pybind11 is also pulled from pip (see below) so CMake can locate it
+        # via `python -m pybind11 --cmakedir`. The brew formula is not required
+        # when pybind11_DIR is passed explicitly.
+        run: |
+          brew install boost fmt yaml-cpp openssl@3
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pybind11 pytest numpy pandas pyyaml
+
+      - name: Configure CMake with bindings
+        run: |
+          cmake -B engine/build -S engine \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_PYTHON_BINDINGS=ON \
+            -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) \
+            -Dpybind11_DIR=$(python -m pybind11 --cmakedir)
+
+      - name: Build
+        run: cmake --build engine/build -j$(sysctl -n hw.logicalcpu)
+
+      - name: Run C++ tests
+        working-directory: engine/build
+        run: ctest --output-on-failure
+
+      - name: Copy binding artifact to importable location
+        # Handles both .so (Linux-style) and .dylib / .so (macOS) output names.
+        run: |
+          cp engine/build/bindings/_coe_engine*.so src/coe_engine/ 2>/dev/null || true
+          cp engine/build/bindings/_coe_engine*.dylib src/coe_engine/ 2>/dev/null || true
+
+      - name: Run binding tests
+        run: |
+          PYTHONPATH=src pytest tests/test_bindings.py -v
+
+      - name: Smoke test
+        run: |
+          PYTHONPATH=src python -c "
+          from coe_engine import SignalScorer, Config
+          print('Bindings loaded successfully')
+          c = Config('config/strategy.yaml')
+          s = SignalScorer(c)
+          print('SignalScorer initialized')
+          "

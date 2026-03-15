@@ -1,0 +1,13 @@
+risk:
+  daily_loss_limit: -50.0
+  max_positions: 5
+  max_single_position: 20.0
+
+  circuit_breaker:
+    window_size: 20
+    min_win_rate: 0.40
+
+  sizing:
+    method: half_kelly
+    kelly_fraction: 0.5
+    max_bet: 20.0

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COE Trading Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root {
+            --bg-primary:   #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card:      #1c2128;
+            --border:       #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --green:  #3fb950;
+            --red:    #f85149;
+            --blue:   #58a6ff;
+            --yellow: #d29922;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 13px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Header ─────────────────────────────────────────── */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            height: 48px;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--blue);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .metric-pill {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .metric-pill .label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .metric-pill .value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* connection indicator */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--red);
+            flex-shrink: 0;
+        }
+
+        .status-dot.connected {
+            background: var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* ── Grid ────────────────────────────────────────────── */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+            padding: 12px;
+            height: calc(100vh - 48px);
+        }
+
+        /* ── Cards ───────────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+
+        .card-header .card-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .card-header .card-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(88, 166, 255, 0.12);
+            color: var(--blue);
+        }
+
+        .card-body {
+            flex: 1;
+            padding: 12px;
+            overflow: auto;
+            min-height: 0;
+        }
+
+        /* ── Chart wrappers ──────────────────────────────────── */
+        .chart-wrapper {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* ── Tables ──────────────────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 4px 8px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+            transition: background 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        tbody td {
+            padding: 6px 8px;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .pos { color: var(--green); }
+        .neg { color: var(--red); }
+        .neutral { color: var(--text-secondary); }
+
+        .side-long  { color: var(--green); font-weight: 600; }
+        .side-short { color: var(--red);   font-weight: 600; }
+
+        /* ── Bottom-right split ──────────────────────────────── */
+        .split-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 0;
+            min-height: 0;
+        }
+
+        .split-panel .pane {
+            flex: 1;
+            overflow: auto;
+            min-height: 0;
+        }
+
+        .split-panel .pane + .pane {
+            border-top: 1px solid var(--border);
+        }
+
+        .pane-header {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        /* ── Signal log ──────────────────────────────────────── */
+        .signal-entry {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 5px 12px;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+            font-size: 12px;
+        }
+
+        .signal-entry:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .signal-time {
+            color: var(--text-secondary);
+            font-size: 10px;
+            flex-shrink: 0;
+            min-width: 68px;
+        }
+
+        .signal-type {
+            font-weight: 600;
+            color: var(--blue);
+            min-width: 80px;
+        }
+
+        .signal-symbol {
+            color: var(--yellow);
+            min-width: 60px;
+        }
+
+        .signal-score {
+            margin-left: auto;
+            font-size: 11px;
+        }
+
+        /* ── Responsive ──────────────────────────────────────── */
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 40vh);
+                overflow-y: auto;
+                height: auto;
+            }
+            .header-right .metric-pill:nth-child(n+3) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ HEADER ══════════════════════════════════════ -->
+<header class="header">
+    <div class="header-left">
+        <span class="status-dot" id="statusDot"></span>
+        <h1>COE &mdash; Contrarian Options Alpha Engine</h1>
+    </div>
+    <div class="header-right">
+        <div class="metric-pill">
+            <span class="label">Daily P&amp;L</span>
+            <span class="value" id="hdr-daily-pnl">—</span>
+        </div>
+        <div class="metric-pill">
+            <span class="label">Total P&amp;L</span>
+            <span class="value" id="hdr-total-pnl">—</span>
+        </div>
+        <div class="metric-pill">
+            <span class="label">Win Rate</span>
+            <span class="value" id="hdr-win-rate">—</span>
+        </div>
+        <div class="metric-pill">
+            <span class="label">Trades</span>
+            <span class="value" id="hdr-trade-count">—</span>
+        </div>
+        <div class="metric-pill">
+            <span class="label">Open Pos</span>
+            <span class="value" id="hdr-open-pos">—</span>
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════════════════════════════ GRID ════════════════════════════════════════ -->
+<div class="dashboard-grid">
+
+    <!-- ── Top-left : Daily P&L sparkline ─────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Daily P&amp;L Sparkline</span>
+            <span class="card-badge" id="pnl-badge">0 trades</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-wrapper">
+                <canvas id="pnlChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Top-right : Positions table ────────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Open Positions</span>
+            <span class="card-badge" id="pos-count-badge">0</span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Entry</th>
+                        <th>Current</th>
+                        <th>Unrealized P&amp;L</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsBody">
+                    <tr>
+                        <td colspan="6" class="neutral" style="text-align:center; padding:20px;">
+                            No open positions
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── Bottom-left : Equity curve ─────────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+            <span class="card-badge" id="equity-badge">—</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-wrapper">
+                <canvas id="equityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bottom-right : Signals + Recent trades ─────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Activity Feed</span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="split-panel">
+                <!-- signals pane -->
+                <div class="pane" id="signalsPane">
+                    <div class="pane-header">Signal Log</div>
+                    <div id="signalsList"></div>
+                </div>
+                <!-- trades pane -->
+                <div class="pane" id="tradesPane">
+                    <div class="pane-header">Recent Trades</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>P&amp;L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradesBody">
+                            <tr>
+                                <td colspan="6" class="neutral" style="text-align:center; padding:16px;">
+                                    No trades yet
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/static/dashboard.js"></script>
+</body>
+</html>

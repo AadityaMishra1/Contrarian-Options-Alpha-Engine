@@ -1,0 +1,43 @@
+broker:
+  host: "127.0.0.1"
+  port: 7496  # TWS live
+  client_id: 1
+  readonly: false
+
+# Tighter risk limits for live trading
+risk:
+  daily_loss_limit: -30.0  # tighter than paper
+  max_positions: 3
+  max_single_position: 15.0
+  circuit_breaker:
+    window_size: 20
+    min_win_rate: 0.45  # higher bar for live
+
+capital:
+  max_capital: 500.0
+  initial_capital: 200.0
+  position_scale: 0.5  # scale down position sizes
+
+screener:
+  scan_interval: 60
+  min_market_cap: 1000000000
+  min_volume: 1000000
+  rsi_pre_filter: 35.0
+
+sentiment:
+  model: "claude-haiku-4-5-20251001"
+  confidence_threshold: 0.8  # higher confidence for live
+  cache_ttl: 3600
+
+trading:
+  market_open: "09:30"
+  market_close: "16:00"
+  timezone: "US/Eastern"
+  exit_check_interval: 30
+  reconcile_interval: 300
+  require_confirmation: true  # prompt before first trade
+
+logging:
+  level: "INFO"
+  trade_log_dir: "logs/trades"
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"

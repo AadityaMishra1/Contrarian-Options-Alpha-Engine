@@ -1,0 +1,54 @@
+broker:
+  host: "127.0.0.1"
+  port: 7497  # TWS paper trading
+  client_id: 1
+  readonly: false
+
+screener:
+  scan_interval: 60  # seconds
+  min_market_cap: 1000000000  # $1B
+  min_volume: 1000000
+  rsi_pre_filter: 35.0
+
+sentiment:
+  model: "claude-haiku-4-5-20251001"
+  confidence_threshold: 0.7
+  cache_ttl: 3600  # 1 hour
+
+trading:
+  market_open: "09:30"
+  market_close: "16:00"
+  timezone: "US/Eastern"
+  exit_check_interval: 30  # seconds
+  reconcile_interval: 300  # 5 minutes
+
+logging:
+  level: "INFO"
+  trade_log_dir: "logs/trades"
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+
+# V2 Strategy Configuration — Index Options Focus
+# Used by src/broker/v2_trader.py (V2TradingOrchestrator).
+# The v1 keys above (screener, sentiment, trading) are retained for
+# backward compatibility with PaperTradingOrchestrator (paper_trader.py).
+strategy_v2:
+  # Core: index options premium selling (SPY, QQQ, IWM)
+  universe: ["SPY", "QQQ", "IWM"]
+  min_gap_ratio: 1.05         # IV/HV threshold; lower than stock-level (1.2) because
+                               # index vol premium is structurally persistent
+  scan_interval: 60            # seconds between full scan cycles
+  execution_start: "11:00"     # ET — mid-day for tighter bid/ask spreads
+  execution_end: "14:00"       # ET — avoid end-of-day gamma/vol spikes
+
+  # Position management
+  profit_target_pct: 0.50      # close at 50% of max profit (standard for iron condors)
+  stop_loss_multiple: 2.0      # close when loss = 2x initial credit received
+  max_positions: 3             # at most 3 concurrent index positions
+  max_position_pct: 0.03       # max 3% of account per position (quarter-Kelly)
+
+  # VIX data source (used when Polygon Starter tier lacks index data)
+  vix_csv_path: "data/cache/vix_history.csv"
+
+  # PEAD (secondary, individual stocks, earnings season only)
+  pead_enabled: true
+  pead_sue_threshold: 1.0      # minimum |SUE| to qualify a PEAD candidate
